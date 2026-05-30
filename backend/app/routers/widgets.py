@@ -1,46 +1,51 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Widget
 from app.schemas.widget import WidgetCreate, WidgetUpdate
 
 router = APIRouter(prefix="/widgets", tags=["widgets"])
 
-widgets = [
-    {"id": 1, "type": "clock", "title": "My Clock", "config": {}},
-    {"id": 2, "type": "todo", "title": "Study Todo", "config": {}},
-]
-
 @router.get("/")
-def get_widgets():
-    return widgets
+def get_widgets(db: Session = Depends(get_db)):
+    return db.query(Widget).all()
 
 @router.get("/{widget_id}")
-def get_widget(widget_id: int):
-    for widget in widgets:
-        if widget["id"] == widget_id:
-            return widget
-    raise HTTPException(status_code=404, detail="Widget not found")
+def get_widget(widget_id: int, db: Session = Depends(get_db)):
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget not found")
+    return widget
 
 @router.post("/")
-def create_widget(widget: WidgetCreate):
-    new_widget = {
-        "id": len(widgets) + 1,
-        **widget.model_dump()
-    }
-    widgets.append(new_widget)
+def create_widget(widget: WidgetCreate, db: Session = Depends(get_db)):
+    new_widget = Widget(**widget.model_dump())
+    db.add(new_widget)
+    db.commit()
+    db.refresh(new_widget)
     return new_widget
 
 @router.patch("/{widget_id}")
-def update_widget(widget_id: int, data: WidgetUpdate):
-    for widget in widgets:
-        if widget["id"] == widget_id:
-            update_data = data.model_dump(exclude_unset=True)
-            widget.update(update_data)
-            return widget
-    raise HTTPException(status_code=404, detail="Widget not found")
+def update_widget(widget_id: int, data: WidgetUpdate, db: Session = Depends(get_db)):
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(widget, key, value)
+
+    db.commit()
+    db.refresh(widget)
+    return widget
 
 @router.delete("/{widget_id}")
-def delete_widget(widget_id: int):
-    for widget in widgets:
-        if widget["id"] == widget_id:
-            widgets.remove(widget)
-            return {"message": "Widget deleted"}
-    raise HTTPException(status_code=404, detail="Widget not found")
+def delete_widget(widget_id: int, db: Session = Depends(get_db)):
+    widget = db.query(Widget).filter(Widget.id == widget_id).first()
+    if not widget:
+        raise HTTPException(status_code=404, detail="Widget not found")
+
+    db.delete(widget)
+    db.commit()
+    return {"message": "Widget deleted"}

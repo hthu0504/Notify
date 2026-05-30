@@ -16,6 +16,14 @@ class LoginRequest(BaseModel):
         return email
 
 
+class RegisterRequest(LoginRequest):
+    name: str | None = None
+
+
+class SocialLoginRequest(BaseModel):
+    provider: str
+
+
 class UserResponse(BaseModel):
     email: str
     name: str
