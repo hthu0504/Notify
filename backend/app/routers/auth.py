@@ -37,24 +37,20 @@ def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email and password are required")
 
     user = db.query(User).filter(User.email == credentials.email).first()
-    password_hash = hash_password(credentials.password)
 
-    if user and user.password_hash and user.password_hash != password_hash:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    if not user:
-        user = User(
-            email=credentials.email,
-            name=credentials.email.split("@")[0],
-            password_hash=password_hash,
-            provider="email",
+    password_hash = hash_password(credentials.password)
+
+    if not user.password_hash or user.password_hash != password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
         )
-        db.add(user)
-    elif not user.password_hash:
-        user.password_hash = password_hash
 
     user.last_login_at = datetime.utcnow()
     db.commit()
