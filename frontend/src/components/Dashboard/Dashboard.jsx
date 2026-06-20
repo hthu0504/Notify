@@ -269,7 +269,7 @@ const normalizeWidget = (widget) => {
   };
 };
 
-const Dashboard = ({ onLogout }) => {
+const Dashboard = ({ user, onLogout }) => {
   const hasLoadedDashboardState = useRef(false);
   const [activeTab, setActiveTab] = useState("layout");
   const [activeSize, setActiveSize] = useState("wide");
@@ -1027,19 +1027,17 @@ const Dashboard = ({ onLogout }) => {
                     </button>
                     ))}
                   <div className="mt-auto flex flex-col gap-1">
-                    <button className="flex items-center gap-3 p-4 rounded-2xl hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] duration-200 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white text-sm">
+                    <button
+                    onClick={() => setActiveMenu("Settings")}
+                    className={`flex items-center gap-3 p-4 rounded-2xl duration-200 text-sm ${
+                      activeMenu === "Settings"
+                        ? "bg-[#EAE4D5] dark:bg-[#202554] text-black dark:text-white"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] hover:text-black dark:hover:text-white"
+                    }`}
+                  >
                       <FaCog />
                       <span>Settings</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={onLogout}
-                      className="flex items-center gap-3 p-4 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/40 duration-200 text-red-600 dark:text-red-300 hover:text-red-700 dark:hover:text-red-200 text-sm"
-                    >
-                      <FaSignOutAlt />
-                      <span>Logout</span>
-                    </button>
+                  </button>
                   </div>
         </div>
         </div>
@@ -1148,6 +1146,60 @@ const Dashboard = ({ onLogout }) => {
               </div>
             ))}
 
+          </div>
+        )}
+
+        {activeMenu === "Settings" && (
+          <div className="space-y-6">
+            <div className="rounded-3xl bg-white dark:bg-[#0f1428] border border-[#EAE4D5] dark:border-[#1e2445] p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-3xl bg-[#412D15] dark:bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                  {user?.name?.charAt(0).toUpperCase() ?? "U"}
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Thông tin của tôi
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Thông tin tài khoản hiện tại.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 text-sm text-gray-700 dark:text-gray-200">
+                <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Tên</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {user?.name ?? "Người dùng"}
+                  </span>
+                </div>
+                <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Email</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {user?.email ?? "chưa có email"}
+                  </span>
+                </div>
+                {user?.role && (
+                  <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Vai trò</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {user.role}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              className="w-full rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 py-4 font-semibold transition hover:bg-red-100 dark:hover:bg-red-900"
+            >
+              <div className="inline-flex items-center gap-2 justify-center">
+                <FaSignOutAlt />
+                Đăng xuất
+              </div>
+            </button>
           </div>
         )}
 

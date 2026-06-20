@@ -28,6 +28,7 @@ const App = () => {
   }
 
   const handleLogout = () => {
+    localStorage.removeItem('notify_token');
     localStorage.removeItem('notify_user');
     setUser(null);
   };
@@ -35,7 +36,7 @@ const App = () => {
   return (
     <div>
       <Navbar />
-      <Dashboard onLogout={handleLogout} /> 
+      <Dashboard user={user} onLogout={handleLogout} />
     </div>
   )
 }
