@@ -1,6 +1,4 @@
 import React from "react";
-import LightButton from "../../assets/light-mode-button.png";
-import DarkButton from "../../assets/dark-mode-button.png";
 
 const DarkMode = () => {
   const [theme, setTheme] = React.useState(
@@ -20,22 +18,13 @@ const DarkMode = () => {
   }, [theme]);
 
   return (
-    <div className="relative">
-      <img
-        src={LightButton}
-        alt=""
-        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        className={`w-12 cursor-pointer drop-shadow-[1px_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300 absolute right-0 z-10 ${
-          theme === "dark" ? "opacity-0" : "opacity-100"
-        } `}
-      />
-      <img
-        src={DarkButton}
-        alt=""
-        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        className="w-12 cursor-pointer drop-shadow-[1px_1px_1px_rgba(0,0,0,0.1)] transition-all duration-300"
-      />
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      className="rounded-full border-none bg-[#222831] px-[18px] py-2.5 text-sm font-semibold text-white transition duration-200 ease-out hover:-translate-y-0.5 hover:opacity-90 dark:bg-[#f5efe6] dark:text-[#101820]"
+    >
+      {theme === "dark" ? "Light Mode" : "Dark Mode"}
+    </button>
   );
 };
 
