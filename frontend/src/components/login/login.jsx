@@ -32,7 +32,7 @@ const Login = () => {
           <h2>Welcome back</h2>
 
           <p className="description">
-            Log in or create an account securely with Keycloak.
+            Log in or create an account
           </p>
 
           <button
@@ -40,7 +40,7 @@ const Login = () => {
             type="button"
             onClick={handleKeycloakLogin}
           >
-            Login with Keycloak
+            Login
           </button>
 
           <button
