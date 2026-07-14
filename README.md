@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/dashboard.png" alt="Notify Dashboard Preview" width="800">
+  <img src="docs/images/notify_dashboard.png" alt="Notify Dashboard Preview" width="800">
 </p>
 
 ## Table of Contents
