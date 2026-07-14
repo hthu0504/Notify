@@ -61,7 +61,7 @@ Browser
 ### 1. Create the environment file
 
 ```powershell
-Copy-Item .env.example .env
+cp .env.example .env
 ```
 
 ### 2. Configure environment variables
