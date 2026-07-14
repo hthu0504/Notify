@@ -3,20 +3,34 @@
 **Notify** is a personal dashboard application that allows users to build and customize their own desktop widgets. Users can authenticate with Keycloak and manage widgets such as clocks, weather, and task management through a modern React interface.
 
 <p align="center">
-
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi)
-![React](https://img.shields.io/badge/React-61DAFB?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker)
-![License](https://img.shields.io/badge/License-MIT-green)
-
+  <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-61DAFB?logo=react" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker" alt="Docker">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
 </p>
 
 <p align="center">
-  <img src="notify_dashboard.png" alt="Notify Dashboard Preview" width="800">
+  <img src="docs/images/dashboard.png" alt="Notify Dashboard Preview" width="800">
 </p>
+
+## Table of Contents
+
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start with Docker](#quick-start-with-docker)
+- [Local Development](#local-development)
+- [Environment Variables](#environment-variables)
+- [REST API](#rest-api)
+- [Project Structure](#project-structure)
+- [Security & Deployment Notes](#security--deployment-notes)
+- [Code Quality](#code-quality)
+- [Contributors](#contributors)
+- [License](#license)
 
 ## Features
 
@@ -33,7 +47,7 @@
 
 | Component | Technology |
 | ---------- | ---------- |
-| Frontend | React 19, Vite 8, Tailwind CSS |
+| Frontend | React 19, Vite 8, Tailwind CSS, TypeScript |
 | Backend | FastAPI, SQLAlchemy, Uvicorn |
 | Database | PostgreSQL 17 |
 | Authentication | Keycloak 26, OpenID Connect |
@@ -51,6 +65,7 @@ Browser
   `-- Open-Meteo APIs (Weather & Geocoding)
 ```
 
+
 ## Prerequisites
 
 - Docker Desktop or Docker Engine with Docker Compose v2
@@ -60,7 +75,7 @@ Browser
 
 ### 1. Create the environment file
 
-```powershell
+```bash
 cp .env.example .env
 ```
 
@@ -85,7 +100,7 @@ KEYCLOAK_ADMIN_PASSWORD=change-me
 
 ### 3. Start all services
 
-```powershell
+```bash
 docker compose up --build
 ```
 
@@ -105,7 +120,7 @@ On the Notify homepage, click **Sign In** or **Register** to authenticate using 
 
 To stop all containers and remove the database volume:
 
-```powershell
+```bash
 docker compose down -v
 ```
 
@@ -113,23 +128,26 @@ docker compose down -v
 
 The frontend and backend can also be run independently. A PostgreSQL instance must be accessible, and the backend should be configured with the appropriate `DATABASE_URL`.
 
-### Backend
+### Backend (Linux/macOS)
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+```
+
+### Backend (Windows PowerShell)
 
 ```powershell
-Set-Location backend
+cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-$env:DATABASE_URL = "postgresql://notify:notify123@localhost:5433/notify_db"
-
-uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
 
-```powershell
-Set-Location frontend
+```bash
+cd frontend
 
 npm ci
 
@@ -193,8 +211,8 @@ Interactive OpenAPI documentation is available at `/docs` once the backend is ru
 
 ### Frontend
 
-```powershell
-Set-Location frontend
+```bash
+cd frontend
 
 npm run lint
 npm run build
@@ -202,3 +220,14 @@ npm run build
 
 Automated backend tests have not yet been implemented.
 ````
+
+## Contributors
+
+| Name | Role |
+|------|------|
+| Hoang Anh Thu Nguyen | Backend Development, Authentication, API Integration |
+| Mai Anh Tran | Contributor |
+
+## License
+
+This project is licensed under the MIT License.
