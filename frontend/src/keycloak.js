@@ -6,6 +6,8 @@ const keycloak = new Keycloak({
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? "notify-frontend",
 });
 
+console.log("Keycloak token:", keycloak.token);
+
 let initPromise;
 
 export const initKeycloak = () => {
@@ -38,3 +40,4 @@ export const getKeycloakUser = async () => {
 };
 
 export default keycloak;
+

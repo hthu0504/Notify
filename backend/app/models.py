@@ -19,7 +19,8 @@ class Widget(Base):
     __tablename__ = "widgets"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, nullable=False, index=True)
     type = Column(String, nullable=False)
     title = Column(String, nullable=False)
-    config = Column(JSON, default={})
+    config = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
