@@ -5,26 +5,14 @@ import Login from './components/login/login';
 import keycloak, { getKeycloakUser, initKeycloak } from './keycloak';
 
 const App = () => {
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem('notify_user');
-
-    if (!storedUser) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(storedUser);
-    } catch {
-      localStorage.removeItem('notify_user');
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     initKeycloak()
       .then(async (authenticated) => {
         if (!authenticated) {
+          setUser(null);
           return;
         }
 
@@ -32,10 +20,12 @@ const App = () => {
 
         localStorage.setItem('notify_token', keycloak.token);
         localStorage.setItem('notify_user', JSON.stringify(keycloakUser));
+
         setUser(keycloakUser);
       })
       .catch((error) => {
         console.error('Keycloak authentication failed', error);
+        setUser(null);
       })
       .finally(() => {
         setIsCheckingAuth(false);
@@ -69,7 +59,7 @@ const App = () => {
       <Navbar />
       <Dashboard user={user} onLogout={handleLogout} />
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;
