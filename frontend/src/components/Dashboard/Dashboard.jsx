@@ -327,45 +327,62 @@ const Dashboard = ({ user, onLogout }) => {
     ? weatherLocationResults
     : featuredWeatherLocations;
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/dashboard-state/`)
-      .then((res) => res.json())
-      .then((data) => {
-        setWidgets((data.widgets || []).map(normalizeWidget));
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        hasLoadedDashboardState.current = true;
-      });
-  }, []);
+useEffect(() => {
+  const token = localStorage.getItem("notify_token");
 
-  useEffect(() => {
-    if (!hasLoadedDashboardState.current) {
-      return;
-    }
+  if (!token) {
+    console.error("No authentication token found.");
+    hasLoadedDashboardState.current = true;
+    return;
+  }
 
-    fetch(`${API_BASE_URL}/dashboard-state/`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ widgets }),
-    }).catch((err) => console.error(err));
-  }, [widgets]);
+  fetch(`${API_BASE_URL}/dashboard-state/`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`Failed to load dashboard: ${res.status}`);
+      }
 
-  const updateWidget = (widgetId, updater) => {
-    setWidgets((prev) =>
-      prev.map((widget) => {
-        if (widget.id !== widgetId) {
-          return widget;
-        }
+      return res.json();
+    })
+    .then((data) => {
+      setWidgets((data.widgets || []).map(normalizeWidget));
+    })
+    .catch((err) => {
+      console.error("Dashboard load failed:", err);
+    })
+    .finally(() => {
+      hasLoadedDashboardState.current = true;
+    });
+}, []);
 
-        return typeof updater === "function"
-          ? updater(widget)
-          : { ...widget, ...updater };
-      })
-    );
-  };
+ useEffect(() => {
+  if (!hasLoadedDashboardState.current) {
+    return;
+  }
+
+  const token = localStorage.getItem("notify_token");
+
+  if (!token) {
+    console.error("No authentication token found.");
+    return;
+  }
+
+  fetch(`${API_BASE_URL}/dashboard-state/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ widgets }),
+  }).catch((err) => {
+    console.error("Dashboard save failed:", err);
+  });
+}, [widgets]);
 
   useEffect(() => {
     const timer = setInterval(() => {

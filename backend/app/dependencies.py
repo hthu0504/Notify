@@ -56,6 +56,8 @@ def get_current_user(
             )
 
         # Verify signature, expiration, and issuer
+        print("KEYCLOAK_ISSUER =", KEYCLOAK_ISSUER)
+        print("TOKEN ISSUER =", jwt.get_unverified_claims(token).get("iss"))        
         payload = jwt.decode(
             token,
             key,
