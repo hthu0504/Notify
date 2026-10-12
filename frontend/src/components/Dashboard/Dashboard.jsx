@@ -10,9 +10,8 @@ import {
 // --- Reusable Slider ---
 const Slider = ({ value, onChange, min = 0, max = 100, disabled = false }) => (
   <div
-    className={`relative w-full h-2 rounded-full bg-gray-300 dark:bg-[#1a1f3c] ${
-      disabled ? "opacity-50" : ""
-    }`}
+    className={`relative w-full h-2 rounded-full bg-gray-300 dark:bg-[#1a1f3c] ${disabled ? "opacity-50" : ""
+      }`}
   >
     <div
       className="absolute h-2 rounded-full bg-gradient-to-r from-[#412D15] to-[#6B4B25] dark:from-purple-700 dark:to-purple-400"
@@ -25,9 +24,8 @@ const Slider = ({ value, onChange, min = 0, max = 100, disabled = false }) => (
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(Number(e.target.value))}
-      className={`absolute inset-0 w-full opacity-0 h-2 ${
-        disabled ? "cursor-not-allowed" : "cursor-pointer"
-      }`}
+      className={`absolute inset-0 w-full opacity-0 h-2 ${disabled ? "cursor-not-allowed" : "cursor-pointer"
+        }`}
     />
     <div
       className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#412D15] dark:bg-purple-400 border-2 border-white shadow-[#412D15] dark:shadow-purple-900 pointer-events-none"
@@ -40,18 +38,16 @@ const Slider = ({ value, onChange, min = 0, max = 100, disabled = false }) => (
 const SizeBtn = ({ label, active, onClick, icon }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg transition-all duration-200 text-[10px] ${
-      active
+    className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg transition-all duration-200 text-[10px] ${active
         ? "bg-[#412D15]/60 dark:bg-purple-700/60 border border-[#412D15] dark:border-purple-500 text-white"
         : "bg-[#F5F1E8] dark:bg-[#12172e] border border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-600"
-    }`}
+      }`}
   >
     <div
-      className={`w-6 h-5 rounded border-2 ${
-        active
+      className={`w-6 h-5 rounded border-2 ${active
           ? "border-[#412D15] dark:border-purple-500"
           : "border-gray-400 dark:border-gray-500"
-      } flex items-center justify-center`}
+        } flex items-center justify-center`}
     >
       {icon}
     </div>
@@ -124,18 +120,18 @@ const getClockLocations = () => {
     typeof Intl.supportedValuesOf === "function"
       ? Intl.supportedValuesOf("timeZone")
       : [
-          "UTC",
-          "Asia/Ho_Chi_Minh",
-          "Asia/Bangkok",
-          "Asia/Tokyo",
-          "Asia/Singapore",
-          "Europe/London",
-          "Europe/Paris",
-          "America/Chicago",
-          "America/New_York",
-          "America/Los_Angeles",
-          "Australia/Sydney",
-        ];
+        "UTC",
+        "Asia/Ho_Chi_Minh",
+        "Asia/Bangkok",
+        "Asia/Tokyo",
+        "Asia/Singapore",
+        "Europe/London",
+        "Europe/Paris",
+        "America/Chicago",
+        "America/New_York",
+        "America/Los_Angeles",
+        "Australia/Sydney",
+      ];
 
   const generatedLocations = timeZones.map((timeZone) => ({
     label: getLocationNameFromTimeZone(timeZone),
@@ -248,8 +244,7 @@ const widgetSizeLimits = {
 };
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
-
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const normalizeWidget = (widget) => {
   const isTaskManagementWidget = widget.type === "Task Management";
 
@@ -327,62 +322,96 @@ const Dashboard = ({ user, onLogout }) => {
     ? weatherLocationResults
     : featuredWeatherLocations;
 
-useEffect(() => {
-  const token = localStorage.getItem("notify_token");
+  useEffect(() => {
+    const token = localStorage.getItem("notify_token");
 
-  if (!token) {
-    console.error("No authentication token found.");
-    hasLoadedDashboardState.current = true;
-    return;
-  }
-
-  fetch(`${API_BASE_URL}/dashboard-state/`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`Failed to load dashboard: ${res.status}`);
-      }
-
-      return res.json();
-    })
-    .then((data) => {
-      setWidgets((data.widgets || []).map(normalizeWidget));
-    })
-    .catch((err) => {
-      console.error("Dashboard load failed:", err);
-    })
-    .finally(() => {
+    if (!token) {
+      console.error("No authentication token found.");
       hasLoadedDashboardState.current = true;
-    });
-}, []);
+      return;
+    }
 
- useEffect(() => {
-  if (!hasLoadedDashboardState.current) {
-    return;
-  }
+    fetch(`${API_BASE_URL}/dashboard-state/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to load dashboard: ${res.status}`);
+        }
 
-  const token = localStorage.getItem("notify_token");
+        return res.json();
+      })
+      .then((data) => {
+        setWidgets((data.widgets || []).map(normalizeWidget));
+      })
+      .catch((err) => {
+        console.error("Dashboard load failed:", err);
+      })
+      .finally(() => {
+        hasLoadedDashboardState.current = true;
+      });
+  }, []);
 
-  if (!token) {
-    console.error("No authentication token found.");
-    return;
-  }
+  useEffect(() => {
+    if (!hasLoadedDashboardState.current) {
+      return;
+    }
 
-  fetch(`${API_BASE_URL}/dashboard-state/`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ widgets }),
-  }).catch((err) => {
-    console.error("Dashboard save failed:", err);
-  });
-}, [widgets]);
+    const token = localStorage.getItem("notify_token");
+
+    if (!token) {
+      console.error("No authentication token found.");
+      return;
+    }
+
+    // Debounce frequent updates (e.g., dragging opacity and resizing).
+    const saveTimer = setTimeout(() => {
+      fetch(`${API_BASE_URL}/dashboard-state/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ widgets }),
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const errorText = await response.text();
+
+            throw new Error(
+              `Dashboard save failed: ${response.status} ${errorText}`
+            );
+          }
+
+          const data = await response.json();
+          const serverWidgets = (data.widgets || []).map(normalizeWidget);
+
+          // Sync database IDs back to frontend.
+          // Only update state when the IDs actually changed
+          // so we don't create an infinite save loop.
+          setWidgets((currentWidgets) => {
+            const sameIds =
+              currentWidgets.length === serverWidgets.length &&
+              currentWidgets.every(
+                (widget, index) =>
+                  widget.id === serverWidgets[index]?.id
+              );
+
+            return sameIds ? currentWidgets : serverWidgets;
+          });
+
+          console.log("Dashboard saved successfully");
+        })
+        .catch((err) => {
+          console.error("Dashboard save failed:", err);
+        });
+    }, 350);
+
+    return () => clearTimeout(saveTimer);
+  }, [widgets]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -540,6 +569,21 @@ useEffect(() => {
     setCalendarTaskInput("");
   };
 
+  // Update one widget in React state. Changes are persisted by the
+  // dashboard-state effect below, including soft deletion into Trash.
+  // Accept both a partial object and a callback for calendar task updates.
+  const updateWidget = (widgetId, changes) => {
+    setWidgets((previousWidgets) =>
+      previousWidgets.map((widget) => {
+        if (widget.id !== widgetId) return widget;
+
+        const updatedFields =
+          typeof changes === "function" ? changes(widget) : changes;
+        return { ...widget, ...updatedFields };
+      })
+    );
+  };
+
   const updateWidgetDimensions = (widgetId, nextWidth, nextHeight) => {
     const clampedWidth = Math.round(
       clamp(nextWidth, widgetSizeLimits.minWidth, widgetSizeLimits.maxWidth)
@@ -645,9 +689,8 @@ useEffect(() => {
     }
 
     const nextLocation = {
-      label: `${location.name ?? location.label}${
-        location.admin1 ? `, ${location.admin1}` : ""
-      }`,
+      label: `${location.name ?? location.label}${location.admin1 ? `, ${location.admin1}` : ""
+        }`,
       latitude: location.latitude,
       longitude: location.longitude,
       timezone: location.timezone,
@@ -779,11 +822,10 @@ useEffect(() => {
                 return (
                   <div
                     key={day.key}
-                    className={`grid grid-cols-[52px_1fr] gap-4 py-3 ${
-                      index !== calendarDays.length - 1
+                    className={`grid grid-cols-[52px_1fr] gap-4 py-3 ${index !== calendarDays.length - 1
                         ? "border-b border-black/10"
                         : ""
-                    }`}
+                      }`}
                   >
                     <div>
                       <div className="text-sm font-medium text-gray-500">
@@ -947,280 +989,286 @@ useEffect(() => {
         <div className="w-[180px] bg-[#FBF5DD] dark:bg-secondarybackground p-2 flex flex-col gap-1 border-r border-[#EAE4D5] dark:border-[#1e2445]">
           <div className="flex flex-col h-full gap-1">
             <div className="relative">
-            <button
-              onClick={() => setShowCreateMenu(!showCreateMenu)}
-              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#412D15] dark:bg-purple-600 text-white text-sm font-medium hover:opacity-90 transition-all"
-            >
-              <span className="text-lg leading-none">+</span>
-              <span>Create Widget</span>
-            </button>
+              <button
+                onClick={() => setShowCreateMenu(!showCreateMenu)}
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#412D15] dark:bg-purple-600 text-white text-sm font-medium hover:opacity-90 transition-all"
+              >
+                <span className="text-lg leading-none">+</span>
+                <span>Create Widget</span>
+              </button>
 
-            {showCreateMenu && (
-              <div className="mt-2 w-full rounded-2xl bg-white dark:bg-[#0f1428] border border-[#EAE4D5] dark:border-[#1e2445] overflow-hidden shadow-2xl z-50">
+              {showCreateMenu && (
+                <div className="mt-2 w-full rounded-2xl bg-white dark:bg-[#0f1428] border border-[#EAE4D5] dark:border-[#1e2445] overflow-hidden shadow-2xl z-50">
 
-                {[
-                  "Task Management",
-                  "Clock",
-                  "Weather",
-                  "Notes",
-                ].map((item) => (
-                  <button
-                  key={item}
-                  onClick={() => setSelectedWidgetType(item)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left
+                  {[
+                    "Task Management",
+                    "Clock",
+                    "Weather",
+                    "Notes",
+                  ].map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => setSelectedWidgetType(item)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left
                   text-gray-700 dark:text-gray-300
                   hover:bg-[#F5F1E8] dark:hover:bg-[#151b35]
                   transition-colors
-                  ${
-                    selectedWidgetType === item
-                      ? "bg-[#EAE4D5] dark:bg-[#151b35]"
-                      : ""
-                  }`}
-                >
-                    <div
-                    className={`w-4 h-4 rounded border ${
-                      selectedWidgetType === item
-                        ? "bg-[#412D15] dark:bg-purple-500 border-white"
-                        : "border-current"
-                    }`}
-                  />
-                    <span>{item}</span>
-                  </button>
-                ))}
-                <div className="p-2 border-t border-[#EAE4D5] dark:border-[#1e2445]">
-                <button
-                  disabled={!selectedWidgetType}
-                  onClick={() => {
-                    const isTaskManagementWidget =
-                      selectedWidgetType === "Task Management";
-                    const newWidget = {
-                      id: Date.now(),
-                      type: selectedWidgetType,
-                      width: isTaskManagementWidget ? 580 : 220,
-                      height: isTaskManagementWidget ? 540 : 140,
-                      opacity: 100,
-                      cornerRadius: 16,
-                      color: "#412D15",
-                      timeZone: defaultTimeZone,
-                      locationLabel: "Local Time",
-                      weatherLocation: defaultWeatherLocation,
-                      tasksByDate: {},
-                      isFavorite: false,
-                      isDeleted: false,
-                    };
-
-                    setWidgets((prev) => [...prev, newWidget]);
-                    selectWidget(newWidget);
-                    setSelectedWidgetType(null);
-                    setShowCreateMenu(false);
-                  }}
-                  className="w-full p-2 rounded-xl bg-[#412D15] dark:bg-purple-600 text-white text-sm disabled:opacity-50"
-                >
-                  Add Widget
-                </button>
-              </div>
-              </div>
-            )}
-          </div>
-
-                  {[
-                    { icon: <FaStar />, label: "My Widgets" },
-                    { icon: <FaHeart />, label: "Favorites" },
-                    { icon: <FaTrash />, label: "Trash" },
-                  ].map(({ icon, label }) => (
-                    <button
-                      key={label}
-                      onClick={() => setActiveMenu(label)}
-                      className={`flex items-center gap-3 p-4 rounded-2xl duration-200 text-sm
-                      ${
-                        activeMenu === label
-                          ? "bg-[#EAE4D5] dark:bg-[#202554] text-black dark:text-white"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] hover:text-black dark:hover:text-white"
-                      }
-                    `}
+                  ${selectedWidgetType === item
+                          ? "bg-[#EAE4D5] dark:bg-[#151b35]"
+                          : ""
+                        }`}
                     >
-                      {icon}
-                      <span>{label}</span>
+                      <div
+                        className={`w-4 h-4 rounded border ${selectedWidgetType === item
+                            ? "bg-[#412D15] dark:bg-purple-500 border-white"
+                            : "border-current"
+                          }`}
+                      />
+                      <span>{item}</span>
                     </button>
-                    ))}
-                  <div className="mt-auto flex flex-col gap-1">
+                  ))}
+                  <div className="p-2 border-t border-[#EAE4D5] dark:border-[#1e2445]">
                     <button
-                    onClick={() => setActiveMenu("Settings")}
-                    className={`flex items-center gap-3 p-4 rounded-2xl duration-200 text-sm ${
-                      activeMenu === "Settings"
-                        ? "bg-[#EAE4D5] dark:bg-[#202554] text-black dark:text-white"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] hover:text-black dark:hover:text-white"
-                    }`}
-                  >
-                      <FaCog />
-                      <span>Settings</span>
-                  </button>
+                      disabled={!selectedWidgetType}
+                      onClick={() => {
+                        const isTaskManagementWidget =
+                          selectedWidgetType === "Task Management";
+                        const newWidget = {
+                          id: Date.now(),
+                          type: selectedWidgetType,
+                          width: isTaskManagementWidget ? 580 : 220,
+                          height: isTaskManagementWidget ? 540 : 140,
+                          opacity: 100,
+                          cornerRadius: 16,
+                          color: "#412D15",
+                          timeZone: defaultTimeZone,
+                          locationLabel: "Local Time",
+                          weatherLocation: defaultWeatherLocation,
+                          tasksByDate: {},
+                          isFavorite: false,
+                          isDeleted: false,
+                        };
+
+                        setWidgets((prev) => [...prev, newWidget]);
+                        selectWidget(newWidget);
+                        setActiveMenu("My Widgets");
+                        setSelectedWidgetType(null);
+                        setShowCreateMenu(false);
+                      }}
+                      className="w-full p-2 rounded-xl bg-[#412D15] dark:bg-purple-600 text-white text-sm disabled:opacity-50"
+                    >
+                      Add Widget
+                    </button>
                   </div>
-        </div>
+                </div>
+              )}
+            </div>
+
+            {[
+              { icon: <FaStar />, label: "My Widgets" },
+              { icon: <FaHeart />, label: "Favorites" },
+              { icon: <FaTrash />, label: "Trash" },
+            ].map(({ icon, label }) => (
+              <button
+                key={label}
+                onClick={() => setActiveMenu(label)}
+                className={`flex items-center gap-3 p-4 rounded-2xl duration-200 text-sm
+                      ${activeMenu === label
+                    ? "bg-[#EAE4D5] dark:bg-[#202554] text-black dark:text-white"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] hover:text-black dark:hover:text-white"
+                  }
+                    `}
+              >
+                {icon}
+                <span>{label}</span>
+              </button>
+            ))}
+            <div className="mt-auto flex flex-col gap-1">
+              <button
+                onClick={() => setActiveMenu("Settings")}
+                className={`flex items-center gap-3 p-4 rounded-2xl duration-200 text-sm ${activeMenu === "Settings"
+                    ? "bg-[#EAE4D5] dark:bg-[#202554] text-black dark:text-white"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-[#EAE4D5] dark:hover:bg-[#151b35] hover:text-black dark:hover:text-white"
+                  }`}
+              >
+                <FaCog />
+                <span>Settings</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="flex-1 bg-[#FFFDF7] dark:bg-[#0f1428] p-6 overflow-auto"> 
-        {activeMenu === "My Widgets" && (
-          <div className="flex flex-wrap gap-4">
+        <div className="flex-1 bg-[#FFFDF7] dark:bg-[#0f1428] p-6 overflow-auto">
+          {activeMenu === "My Widgets" && (
+            <div className="flex flex-wrap gap-4">
 
-        {activeWidgets.map((widget) => {
-          return (
-            <div
-              key={widget.id}
-              onClick={() => selectWidget(widget)}
-              style={getWidgetStyle(widget)}
-              className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${
-                selectedWidgetId === widget.id
-                  ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
-                  : "ring-0"
-              }`}
-            >
-              {/* ACTION BUTTONS */}
-              <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+              {activeWidgets.map((widget) => {
+                return (
+                  <div
+                    key={widget.id}
+                    onClick={() => selectWidget(widget)}
+                    style={getWidgetStyle(widget)}
+                    className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${selectedWidgetId === widget.id
+                        ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
+                        : "ring-0"
+                      }`}
+                  >
+                    {/* ACTION BUTTONS */}
+                    <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
 
-                {/* FAVORITE */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateWidget(widget.id, {
-                      isFavorite: !widget.isFavorite,
-                    });
-                  }}
-                  className={`relative z-30 w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all
-                    ${
-                      widget.isFavorite
-                        ? "bg-red-500 text-white"
-                        : "bg-black/20 hover:bg-black/40 text-white"
+                      {/* FAVORITE */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateWidget(widget.id, {
+                            isFavorite: !widget.isFavorite,
+                          });
+                        }}
+                        className={`relative z-30 w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all
+                    ${widget.isFavorite
+                            ? "bg-red-500 text-white"
+                            : "bg-black/20 hover:bg-black/40 text-white"
+                          }`}
+                      >
+                        <FaHeart />
+                      </button>
+
+                      {/* DELETE */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateWidget(widget.id, {
+                            isDeleted: true,
+                            isFavorite: false,
+                          });
+
+                          if (selectedWidgetId === widget.id) {
+                            setSelectedWidgetId(null);
+                          }
+                        }}
+                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {renderScaledWidgetContent(widget)}
+                    {renderResizeHandle(widget)}
+                  </div>
+                );
+              })}
+
+            </div>
+          )}
+
+          {activeMenu === "Favorites" && (
+            <div className="flex flex-wrap gap-4">
+
+              {favoriteWidgets.map((widget) => (
+                <div
+                  key={widget.id}
+                  onClick={() => selectWidget(widget)}
+                  style={getWidgetStyle(widget)}
+                  className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${selectedWidgetId === widget.id
+                      ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
+                      : "ring-0"
                     }`}
                 >
-                  <FaHeart />
-                </button>
+                  {/* REMOVE FROM FAVORITES */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
 
-                {/* DELETE */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateWidget(widget.id, {
-                      isDeleted: true,
-                      isFavorite: false,
-                    });
+                      updateWidget(widget.id, {
+                        isFavorite: false,
+                      });
+                    }}
+                    className="absolute top-2 right-2 z-30 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-xs transition-all"
+                    aria-label="Remove from favorites"
+                  >
+                    <FaHeart />
+                  </button>
 
-                    if (selectedWidgetId === widget.id) {
-                      setSelectedWidgetId(null);
-                    }
-                  }}
-                  className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-sm"
-                >
-                  ×
-                </button>
-              </div>
+                  {renderScaledWidgetContent(widget)}
+                  {renderResizeHandle(widget)}
+                </div>
+              ))}
 
-              {renderScaledWidgetContent(widget)}
-              {renderResizeHandle(widget)}
             </div>
-          );
-        })}
+          )}
+          {activeMenu === "Trash" && (
+            <div className="flex flex-wrap gap-4">
 
-          </div>
-        )}
-
-      {activeMenu === "Favorites" && (
-        <div className="flex flex-wrap gap-4">
-
-          {favoriteWidgets.map((widget) => (
-            <div
-              key={widget.id}
-              onClick={() => selectWidget(widget)}
-              style={getWidgetStyle(widget)}
-              className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${
-                selectedWidgetId === widget.id
-                  ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
-                  : "ring-0"
-              }`}
-            >
-              <div className="absolute top-2 right-2 z-30">
-                <FaHeart className="text-red-500" />
-              </div>
-
-              {renderScaledWidgetContent(widget)}
-              {renderResizeHandle(widget)}
-            </div>
-          ))}
-
-        </div>
-      )}
-        {activeMenu === "Trash" && (
-          <div className="flex flex-wrap gap-4">
-
-            {trashWidgets.map((widget) => (
+              {trashWidgets.map((widget) => (
                 <div
-                key={widget.id}
-                style={getWidgetStyle(widget)}
-                className="rounded-2xl text-white p-4 opacity-70"
-              >
-                {renderScaledWidgetContent(widget)}
-              </div>
-            ))}
+                  key={widget.id}
+                  style={getWidgetStyle(widget)}
+                  className="rounded-2xl text-white p-4 opacity-70"
+                >
+                  {renderScaledWidgetContent(widget)}
+                </div>
+              ))}
 
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeMenu === "Settings" && (
-          <div className="space-y-6">
-            <div className="rounded-3xl bg-white dark:bg-[#0f1428] border border-[#EAE4D5] dark:border-[#1e2445] p-6 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-3xl bg-[#412D15] dark:bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                  {user?.name?.charAt(0).toUpperCase() ?? "U"}
+          {activeMenu === "Settings" && (
+            <div className="space-y-6">
+              <div className="rounded-3xl bg-white dark:bg-[#0f1428] border border-[#EAE4D5] dark:border-[#1e2445] p-6 shadow-sm">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-3xl bg-[#412D15] dark:bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                    {user?.name?.charAt(0).toUpperCase() ?? "U"}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Thông tin của tôi
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Thông tin tài khoản hiện tại.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Thông tin của tôi
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Thông tin tài khoản hiện tại.
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-6 grid gap-4 text-sm text-gray-700 dark:text-gray-200">
-                <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Tên</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {user?.name ?? "Người dùng"}
-                  </span>
-                </div>
-                <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Email</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {user?.email ?? "chưa có email"}
-                  </span>
-                </div>
-                {user?.role && (
+                <div className="mt-6 grid gap-4 text-sm text-gray-700 dark:text-gray-200">
                   <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Vai trò</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Tên</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {user.role}
+                      {user?.name ?? "Người dùng"}
                     </span>
                   </div>
-                )}
+                  <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Email</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {user?.email ?? "chưa có email"}
+                    </span>
+                  </div>
+                  {user?.role && (
+                    <div className="grid gap-1 rounded-2xl bg-[#F5F1E8] dark:bg-[#111626] p-4">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Vai trò</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {user.role}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={onLogout}
+                className="w-full rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 py-4 font-semibold transition hover:bg-red-100 dark:hover:bg-red-900"
+              >
+                <div className="inline-flex items-center gap-2 justify-center">
+                  <FaSignOutAlt />
+                  Đăng xuất
+                </div>
+              </button>
             </div>
+          )}
 
-            <button
-              type="button"
-              onClick={onLogout}
-              className="w-full rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 py-4 font-semibold transition hover:bg-red-100 dark:hover:bg-red-900"
-            >
-              <div className="inline-flex items-center gap-2 justify-center">
-                <FaSignOutAlt />
-                Đăng xuất
-              </div>
-            </button>
-          </div>
-        )}
-
-      </div>
+        </div>
 
         {/* RIGHT PANEL */}
         <div className="w-[220px] bg-[#FBF5DD] dark:bg-[#0a0e20] border-l border-[#EAE4D5] dark:border-[#1e2445] flex flex-col text-black dark:text-white overflow-y-auto">
@@ -1231,11 +1279,10 @@ useEffect(() => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 text-xs font-semibold uppercase tracking-widest transition-colors ${
-                  activeTab === tab
+                className={`flex-1 py-3 text-xs font-semibold uppercase tracking-widest transition-colors ${activeTab === tab
                     ? "text-[#412D15] dark:text-purple-400 border-b-2 border-[#412D15] dark:border-purple-500"
                     : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -1357,18 +1404,17 @@ useEffect(() => {
                         const isSelected =
                           clockTimeZone === location.timeZone &&
                           (selectedWidget.locationLabel ?? "Local Time") ===
-                            location.label;
+                          location.label;
 
                         return (
                           <button
                             key={`${location.label}-${location.timeZone}`}
                             type="button"
                             onClick={() => updateSelectedClockLocation(location)}
-                            className={`mb-1 flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors last:mb-0 ${
-                              isSelected
+                            className={`mb-1 flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors last:mb-0 ${isSelected
                                 ? "bg-[#EAE4D5] text-black dark:bg-[#202554] dark:text-white"
                                 : "text-gray-700 hover:bg-[#F5F1E8] dark:text-gray-300 dark:hover:bg-[#151b35]"
-                            }`}
+                              }`}
                           >
                             <span className="font-medium">
                               {location.label}
@@ -1433,9 +1479,8 @@ useEffect(() => {
 
                       {!isWeatherSearching &&
                         visibleWeatherLocations.map((location) => {
-                          const locationLabel = `${location.name ?? location.label}${
-                            location.admin1 ? `, ${location.admin1}` : ""
-                          }`;
+                          const locationLabel = `${location.name ?? location.label}${location.admin1 ? `, ${location.admin1}` : ""
+                            }`;
                           const isSelected =
                             (selectedWidget.weatherLocation ?? defaultWeatherLocation)
                               .label === locationLabel;
@@ -1445,11 +1490,10 @@ useEffect(() => {
                               key={`${locationLabel}-${location.latitude}-${location.longitude}`}
                               type="button"
                               onClick={() => updateSelectedWeatherLocation(location)}
-                              className={`mb-1 flex w-full flex-col rounded-md px-2 py-2 text-left text-xs transition-colors last:mb-0 ${
-                                isSelected
+                              className={`mb-1 flex w-full flex-col rounded-md px-2 py-2 text-left text-xs transition-colors last:mb-0 ${isSelected
                                   ? "bg-[#EAE4D5] text-black dark:bg-[#202554] dark:text-white"
                                   : "text-gray-700 hover:bg-[#F5F1E8] dark:text-gray-300 dark:hover:bg-[#151b35]"
-                              }`}
+                                }`}
                             >
                               <span className="font-medium">{locationLabel}</span>
                               <span className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
@@ -1466,8 +1510,8 @@ useEffect(() => {
 
             {(selectedWidget?.type === "Clock" ||
               selectedWidget?.type === "Weather") && (
-              <div className="border-t border-[#EAE4D5] dark:border-[#1e2445]" />
-            )}
+                <div className="border-t border-[#EAE4D5] dark:border-[#1e2445]" />
+              )}
 
             {/* APPEARANCE */}
             <section>
