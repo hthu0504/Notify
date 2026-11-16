@@ -5,6 +5,7 @@ import {
   FaStar,
   FaCog,
   FaTrash,
+  FaUndo,
   FaSignOutAlt,
 } from "react-icons/fa";
 
@@ -313,6 +314,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [calendarTaskInput, setCalendarTaskInput] = useState("");
   const [notionResources, setNotionResources] = useState({});
   const [resizingWidget, setResizingWidget] = useState(null);
+  const [permanentlyDeletingWidgetId, setPermanentlyDeletingWidgetId] = useState(null);
 
   const sizes = [];
   const activeWidgets = widgets.filter((widget) => !widget.isDeleted);
@@ -747,6 +749,40 @@ const Dashboard = ({ user, onLogout }) => {
         return { ...widget, ...updatedFields };
       })
     );
+  };
+
+  const permanentlyDeleteWidget = async (widgetId) => {
+    const token = localStorage.getItem("notify_token");
+    if (!token) {
+      window.alert("Your Notify session expired. Sign in again and retry.");
+      return;
+    }
+
+    const remainingWidgets = widgets.filter((widget) => widget.id !== widgetId);
+    setPermanentlyDeletingWidgetId(widgetId);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard-state/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ widgets: remainingWidgets }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not permanently delete this widget.");
+      }
+
+      const data = await response.json();
+      setWidgets((data.widgets || []).map(normalizeWidget));
+      if (selectedWidgetId === widgetId) setSelectedWidgetId(null);
+    } catch (error) {
+      window.alert(error.message || "Could not permanently delete this widget.");
+    } finally {
+      setPermanentlyDeletingWidgetId(null);
+    }
   };
 
   const updateWidgetDimensions = (widgetId, nextWidth, nextHeight) => {
@@ -1430,9 +1466,12 @@ const Dashboard = ({ user, onLogout }) => {
                             setSelectedWidgetId(null);
                           }
                         }}
-                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-sm"
+                        type="button"
+                        aria-label="Move widget to Trash"
+                        title="Move to Trash"
+                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-xs"
                       >
-                        ×
+                        <FaTrash />
                       </button>
                     </div>
 
@@ -1488,8 +1527,29 @@ const Dashboard = ({ user, onLogout }) => {
                 <div
                   key={widget.id}
                   style={getWidgetStyle(widget)}
-                  className="rounded-2xl text-white opacity-70"
+                  className="relative rounded-2xl text-white opacity-70"
                 >
+                  <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-xl border border-white/50 bg-white/75 p-1 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-[#151b35]/80">
+                    <button
+                      type="button"
+                      onClick={() => updateWidget(widget.id, { isDeleted: false })}
+                      className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#55406B] transition-colors hover:bg-[#EEE5F6] dark:text-purple-200 dark:hover:bg-purple-400/15"
+                      aria-label={`Restore ${widget.title || widget.type}`}
+                    >
+                      <FaUndo className="text-[11px]" />
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => permanentlyDeleteWidget(widget.id)}
+                      disabled={permanentlyDeletingWidgetId === widget.id}
+                      className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#8B4B57] transition-colors hover:bg-[#F8E9EB] disabled:cursor-wait disabled:opacity-60 dark:text-rose-300 dark:hover:bg-rose-400/15"
+                      aria-label={`Delete ${widget.title || widget.type} permanently`}
+                    >
+                      <FaTrash className="text-[11px]" />
+                      {permanentlyDeletingWidgetId === widget.id ? "Deleting..." : "Delete permanently"}
+                    </button>
+                  </div>
                   {renderScaledWidgetContent(widget)}
                 </div>
               ))}
