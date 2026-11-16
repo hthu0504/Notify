@@ -273,6 +273,7 @@ const normalizeWidget = (widget) => {
     cornerRadius: 16,
     padding: 16,
     color: defaultWidgetColor,
+    textColor: "#000000",
     timeZone: defaultTimeZone,
     locationLabel: "Local Time",
     weatherLocation: defaultWeatherLocation,
@@ -302,6 +303,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [cornerRadius, setCornerRadius] = useState(16);
   const [padding, setPadding] = useState(16);
   const [color, setColor] = useState(defaultWidgetColor);
+  const [textColor, setTextColor] = useState("#000000");
   const [clockTimeZone, setClockTimeZone] = useState(defaultTimeZone);
   const [clockLocationSearch, setClockLocationSearch] = useState("");
   const [isClockLocationOpen, setIsClockLocationOpen] = useState(false);
@@ -649,6 +651,7 @@ const Dashboard = ({ user, onLogout }) => {
     setCornerRadius(widget.cornerRadius ?? 16);
     setPadding(widget.padding ?? 16);
     setColor(widget.color ?? defaultWidgetColor);
+    setTextColor(widget.textColor ?? "#000000");
     setClockTimeZone(widget.timeZone ?? defaultTimeZone);
     setClockLocationSearch("");
     setIsClockLocationOpen(false);
@@ -670,6 +673,7 @@ const Dashboard = ({ user, onLogout }) => {
       cornerRadius: 16,
       padding: 16,
       color: defaultWidgetColor,
+      textColor: "#000000",
       timeZone: defaultTimeZone,
       locationLabel: "Local Time",
       weatherLocation: defaultWeatherLocation,
@@ -870,6 +874,10 @@ const Dashboard = ({ user, onLogout }) => {
       setColor(value);
     }
 
+    if (property === "textColor") {
+      setTextColor(value);
+    }
+
     if (property === "timeZone") {
       setClockTimeZone(value);
     }
@@ -1018,6 +1026,7 @@ const Dashboard = ({ user, onLogout }) => {
     borderRadius: `${widget.cornerRadius ?? 16}px`,
     padding: `${widget.padding ?? 16}px`,
     backgroundColor: widget.color ?? defaultWidgetColor,
+    color: widget.textColor ?? "#000000",
   });
 
   const getWidgetContentScale = (widget) => {
@@ -1064,11 +1073,11 @@ const Dashboard = ({ user, onLogout }) => {
 
       return (
         <div className="flex h-full flex-col overflow-hidden font-serif">
-          <h2 className="text-3xl font-bold leading-none text-white">
+          <h2 className="text-3xl font-bold leading-none text-current">
             Tasks
           </h2>
 
-          <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-[24px] bg-[#f1efec] p-5 text-black">
+          <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-[24px] bg-[#f1efec] p-5" style={{ color: widget.textColor ?? "#000000" }}>
             <div className="mb-4 flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-2xl font-bold leading-none">{currentMonth}</h3>
@@ -1235,7 +1244,7 @@ const Dashboard = ({ user, onLogout }) => {
       if (!weather || weather.status === "loading") {
         return (
           <div className="flex h-full flex-col justify-center pr-12">
-            <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+            <span className="text-xs font-semibold uppercase tracking-wider text-current opacity-70">
               {location.label}
             </span>
             <span className="mt-2 text-lg font-bold">Loading weather</span>
@@ -1246,7 +1255,7 @@ const Dashboard = ({ user, onLogout }) => {
       if (weather?.status === "error") {
         return (
           <div className="flex h-full flex-col justify-center pr-12">
-            <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+            <span className="text-xs font-semibold uppercase tracking-wider text-current opacity-70">
               {location.label}
             </span>
             <span className="mt-2 text-lg font-bold">Weather unavailable</span>
@@ -1256,19 +1265,19 @@ const Dashboard = ({ user, onLogout }) => {
 
       return (
         <div className="flex h-full flex-col justify-center pr-12">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          <span className="text-xs font-semibold uppercase tracking-wider text-current opacity-70">
             {location.label}
           </span>
           <div className="mt-1 flex items-end gap-2">
             <span className="text-4xl font-bold leading-none tabular-nums">
               {Math.round(current?.temperature_2m ?? 0)}°
             </span>
-            <span className="pb-1 text-xs font-semibold text-white/75">C</span>
+            <span className="pb-1 text-xs font-semibold text-current opacity-75">C</span>
           </div>
-          <span className="mt-2 text-xs font-medium text-white/80">
+          <span className="mt-2 text-xs font-medium text-current opacity-80">
             {getWeatherCondition(current?.weather_code)}
           </span>
-          <span className="mt-1 text-[11px] font-medium text-white/65">
+          <span className="mt-1 text-[11px] font-medium text-current opacity-65">
             H {current?.relative_humidity_2m ?? "--"}% · Wind{" "}
             {Math.round(current?.wind_speed_10m ?? 0)} km/h
           </span>
@@ -1288,7 +1297,7 @@ const Dashboard = ({ user, onLogout }) => {
 
     return (
       <div className="flex h-full flex-col justify-center pr-12">
-        <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+        <span className="text-xs font-semibold uppercase tracking-wider text-current opacity-70">
           {locationLabel}
         </span>
         <span className="mt-1 text-4xl font-bold leading-none tabular-nums">
@@ -1298,7 +1307,7 @@ const Dashboard = ({ user, onLogout }) => {
             timeZone,
           })}
         </span>
-        <span className="mt-2 text-xs font-medium text-white/75">
+        <span className="mt-2 text-xs font-medium text-current opacity-75">
           {currentTime.toLocaleDateString([], {
             weekday: "short",
             month: "short",
@@ -1469,7 +1478,7 @@ const Dashboard = ({ user, onLogout }) => {
                         type="button"
                         aria-label="Move widget to Trash"
                         title="Move to Trash"
-                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-xs"
+                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-xs text-white"
                       >
                         <FaTrash />
                       </button>
@@ -1928,11 +1937,11 @@ const Dashboard = ({ user, onLogout }) => {
                 />
               </div>
 
-              {/* Color */}
+              {/* Background Color */}
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Color
+                    Background color
                   </span>
                 </div>
 
@@ -1955,6 +1964,39 @@ const Dashboard = ({ user, onLogout }) => {
                       updateSelectedWidgetAppearance("color", e.target.value)
                     }
                     className="w-full bg-transparent text-xs text-black outline-none disabled:opacity-50 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Text Color */}
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Text color
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-lg bg-[#F5F1E8] p-2 dark:bg-[#12172e]">
+                  <input
+                    type="color"
+                    value={textColor}
+                    disabled={!selectedWidgetId}
+                    onChange={(e) =>
+                      updateSelectedWidgetAppearance("textColor", e.target.value)
+                    }
+                    className="h-9 w-12 cursor-pointer rounded border border-[#EAE4D5] bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1e2445]"
+                    aria-label="Choose widget text color"
+                  />
+
+                  <input
+                    type="text"
+                    value={textColor}
+                    disabled={!selectedWidgetId}
+                    onChange={(e) =>
+                      updateSelectedWidgetAppearance("textColor", e.target.value)
+                    }
+                    className="w-full bg-transparent text-xs text-black outline-none disabled:opacity-50 dark:text-white"
+                    aria-label="Widget text color hex value"
                   />
                 </div>
               </div>
