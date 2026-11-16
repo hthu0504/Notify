@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 
 from app.database import engine
 from app.models import Base
-from app.routers import auth, dashboard, widgets
+from app.routers import auth, dashboard, integrations, widgets
 
 
 def create_tables_with_retry():
@@ -36,6 +36,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(widgets.router)
 app.include_router(dashboard.router)
+app.include_router(integrations.router)
 
 
 @app.get("/")
