@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import IntegrationConsentModal from "../Integrations/IntegrationConsentModal";
 import {
   FaHeart,
   FaStar,
   FaCog,
   FaTrash,
+  FaUndo,
   FaSignOutAlt,
 } from "react-icons/fa";
 
@@ -218,18 +220,32 @@ const getLocalDateKey = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getCalendarDays = () => {
+const getCalendarDays = (taskDateKeys = []) => {
+  const dates = new Map();
   const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  return [1, 0, -1].map((offset) => {
+  [-1, 0, 1].forEach((offset) => {
     const date = new Date(today);
     date.setDate(today.getDate() + offset);
+    dates.set(getLocalDateKey(date), date);
+  });
 
+  taskDateKeys.forEach((dateKey) => {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    if (!Number.isNaN(date.getTime())) dates.set(dateKey, date);
+  });
+
+  return [...dates.values()].sort((left, right) => left - right).map((date) => {
+    const offset = Math.round(
+      (new Date(date.getFullYear(), date.getMonth(), date.getDate()) - todayStart) / 86400000
+    );
     return {
       key: getLocalDateKey(date),
-      dayName: date.toLocaleDateString([], { weekday: "short" }).toUpperCase(),
       dayNumber: date.getDate(),
-      date,
+      isToday: offset === 0,
+      isAdjacentDay: Math.abs(offset) === 1,
     };
   });
 };
@@ -244,16 +260,19 @@ const widgetSizeLimits = {
 };
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+const defaultWidgetColor = "#C9B5E0";
+
 const normalizeWidget = (widget) => {
   const isTaskManagementWidget = widget.type === "Task Management";
 
   return {
-    width: isTaskManagementWidget ? 580 : 220,
-    height: isTaskManagementWidget ? 540 : 140,
+    width: isTaskManagementWidget ? 480 : 220,
+    height: isTaskManagementWidget ? 440 : 140,
     opacity: 100,
     cornerRadius: 16,
-    color: "#412D15",
+    padding: 16,
+    color: defaultWidgetColor,
     timeZone: defaultTimeZone,
     locationLabel: "Local Time",
     weatherLocation: defaultWeatherLocation,
@@ -266,10 +285,12 @@ const normalizeWidget = (widget) => {
 
 const Dashboard = ({ user, onLogout }) => {
   const hasLoadedDashboardState = useRef(false);
+  const skipNextDashboardSave = useRef(false);
   const [activeTab, setActiveTab] = useState("layout");
   const [activeSize, setActiveSize] = useState("wide");
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [selectedWidgetType, setSelectedWidgetType] = useState(null);
+  const [showIntegrationConsent, setShowIntegrationConsent] = useState(false);
   const [selectedWidgetId, setSelectedWidgetId] = useState(null);
   const [widgets, setWidgets] = useState([]);
   const [activeMenu, setActiveMenu] = useState("My Widgets");
@@ -279,7 +300,8 @@ const Dashboard = ({ user, onLogout }) => {
   const [height, setHeight] = useState(140);
   const [opacity, setOpacity] = useState(100);
   const [cornerRadius, setCornerRadius] = useState(16);
-  const [color, setColor] = useState("#412D15");
+  const [padding, setPadding] = useState(16);
+  const [color, setColor] = useState(defaultWidgetColor);
   const [clockTimeZone, setClockTimeZone] = useState(defaultTimeZone);
   const [clockLocationSearch, setClockLocationSearch] = useState("");
   const [isClockLocationOpen, setIsClockLocationOpen] = useState(false);
@@ -290,7 +312,9 @@ const Dashboard = ({ user, onLogout }) => {
   const [isWeatherLocationOpen, setIsWeatherLocationOpen] = useState(false);
   const [isWeatherSearching, setIsWeatherSearching] = useState(false);
   const [calendarTaskInput, setCalendarTaskInput] = useState("");
+  const [notionResources, setNotionResources] = useState({});
   const [resizingWidget, setResizingWidget] = useState(null);
+  const [permanentlyDeletingWidgetId, setPermanentlyDeletingWidgetId] = useState(null);
 
   const sizes = [];
   const activeWidgets = widgets.filter((widget) => !widget.isDeleted);
@@ -321,6 +345,10 @@ const Dashboard = ({ user, onLogout }) => {
   const visibleWeatherLocations = weatherLocationSearch.trim()
     ? weatherLocationResults
     : featuredWeatherLocations;
+  const notionWidgetIds = widgets
+    .filter((widget) => widget.type === "Task Management" && widget.integrations?.notion)
+    .map((widget) => widget.id)
+    .join(",");
 
   useEffect(() => {
     const token = localStorage.getItem("notify_token");
@@ -357,6 +385,11 @@ const Dashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     if (!hasLoadedDashboardState.current) {
+      return;
+    }
+
+    if (skipNextDashboardSave.current) {
+      skipNextDashboardSave.current = false;
       return;
     }
 
@@ -420,6 +453,60 @@ const Dashboard = ({ user, onLogout }) => {
 
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!notionWidgetIds) return;
+
+    const token = localStorage.getItem("notify_token");
+    if (!token) return;
+
+    let cancelled = false;
+    const headers = { Authorization: `Bearer ${token}` };
+    const loadNotionData = () => fetch(`${API_BASE_URL}/integrations/notion/status`, { headers })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("status")))
+      .then(async (status) => {
+        if (!status.connected) return { connected: false, tasksByDate: {} };
+        const today = getLocalDateKey(new Date());
+        const tasksResponse = await fetch(`${API_BASE_URL}/integrations/notion/tasks?today=${today}`, { headers });
+        if (!tasksResponse.ok) throw new Error("Notion data");
+        const taskData = await tasksResponse.json();
+        return {
+          connected: true,
+          workspaceName: status.workspace_name,
+          tasksByDate: taskData.tasks_by_date || {},
+        };
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const resources = {
+          connected: data.connected,
+          workspaceName: data.workspaceName,
+          tasksByDate: data.tasksByDate || {},
+        };
+        setNotionResources((previous) => {
+          const next = { ...previous };
+          notionWidgetIds.split(",").forEach((id) => { next[id] = resources; });
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotionResources((previous) => {
+            const next = { ...previous };
+            notionWidgetIds.split(",").forEach((id) => { next[id] = { connected: false, items: [] }; });
+            return next;
+          });
+        }
+      });
+
+    loadNotionData();
+    const refreshTimer = setInterval(loadNotionData, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(refreshTimer);
+    };
+  }, [notionWidgetIds]);
 
   useEffect(() => {
     if (!resizingWidget) {
@@ -560,13 +647,93 @@ const Dashboard = ({ user, onLogout }) => {
     setHeight(widget.height);
     setOpacity(widget.opacity ?? 100);
     setCornerRadius(widget.cornerRadius ?? 16);
-    setColor(widget.color ?? "#412D15");
+    setPadding(widget.padding ?? 16);
+    setColor(widget.color ?? defaultWidgetColor);
     setClockTimeZone(widget.timeZone ?? defaultTimeZone);
     setClockLocationSearch("");
     setIsClockLocationOpen(false);
     setWeatherLocationSearch("");
     setIsWeatherLocationOpen(false);
     setCalendarTaskInput("");
+  };
+
+  const createWidget = (integrations = []) => {
+    const isTaskManagementWidget = selectedWidgetType === "Task Management";
+    if (!selectedWidgetType) return;
+
+    const newWidget = {
+      id: Date.now(),
+      type: selectedWidgetType,
+      width: isTaskManagementWidget ? 480 : 220,
+      height: isTaskManagementWidget ? 440 : 140,
+      opacity: 100,
+      cornerRadius: 16,
+      padding: 16,
+      color: defaultWidgetColor,
+      timeZone: defaultTimeZone,
+      locationLabel: "Local Time",
+      weatherLocation: defaultWeatherLocation,
+      tasksByDate: {},
+      ...(isTaskManagementWidget && {
+        integrations: {
+          notion: integrations.includes("notion"),
+          google_calendar: integrations.includes("google_calendar"),
+        },
+      }),
+      isFavorite: false,
+      isDeleted: false,
+    };
+
+    setWidgets((prev) => [...prev, newWidget]);
+    selectWidget(newWidget);
+    setActiveMenu("My Widgets");
+    setSelectedWidgetType(null);
+    setShowCreateMenu(false);
+    setShowIntegrationConsent(false);
+    return newWidget;
+  };
+
+  const handleIntegrationContinue = async (integrations) => {
+    const newWidget = createWidget(integrations);
+    if (!newWidget || !integrations.includes("notion")) return;
+
+    const token = localStorage.getItem("notify_token");
+    if (!token) {
+      window.alert("Your Notify session expired. Sign in again, then connect Notion.");
+      return;
+    }
+
+    try {
+      // Persist the widget before leaving Notify for Notion's authorization page.
+      skipNextDashboardSave.current = true;
+      const saveResponse = await fetch(`${API_BASE_URL}/dashboard-state/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ widgets: [...widgets, newWidget] }),
+      });
+      if (!saveResponse.ok) throw new Error("Could not save the Task Management Widget.");
+
+      const savedDashboard = await saveResponse.json();
+      setWidgets((savedDashboard.widgets || []).map(normalizeWidget));
+
+      const authResponse = await fetch(`${API_BASE_URL}/integrations/notion/authorize-url`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!authResponse.ok) {
+        const error = await authResponse.json().catch(() => ({}));
+        throw new Error(error.detail || "Could not start Notion authorization.");
+      }
+
+      const { authorization_url: authorizationUrl } = await authResponse.json();
+      window.location.assign(authorizationUrl);
+    } catch (error) {
+      skipNextDashboardSave.current = false;
+      setWidgets((current) => [...current]);
+      window.alert(error.message || "Could not connect to Notion.");
+    }
   };
 
   // Update one widget in React state. Changes are persisted by the
@@ -582,6 +749,40 @@ const Dashboard = ({ user, onLogout }) => {
         return { ...widget, ...updatedFields };
       })
     );
+  };
+
+  const permanentlyDeleteWidget = async (widgetId) => {
+    const token = localStorage.getItem("notify_token");
+    if (!token) {
+      window.alert("Your Notify session expired. Sign in again and retry.");
+      return;
+    }
+
+    const remainingWidgets = widgets.filter((widget) => widget.id !== widgetId);
+    setPermanentlyDeletingWidgetId(widgetId);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard-state/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ widgets: remainingWidgets }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not permanently delete this widget.");
+      }
+
+      const data = await response.json();
+      setWidgets((data.widgets || []).map(normalizeWidget));
+      if (selectedWidgetId === widgetId) setSelectedWidgetId(null);
+    } catch (error) {
+      window.alert(error.message || "Could not permanently delete this widget.");
+    } finally {
+      setPermanentlyDeletingWidgetId(null);
+    }
   };
 
   const updateWidgetDimensions = (widgetId, nextWidth, nextHeight) => {
@@ -642,6 +843,14 @@ const Dashboard = ({ user, onLogout }) => {
       dimension === "width" ? nextValue : width,
       dimension === "height" ? nextValue : height
     );
+  };
+
+  const updateSelectedWidgetPadding = (value) => {
+    const nextPadding = Math.round(clamp(Number(value) || 0, 0, 40));
+    setPadding(nextPadding);
+    if (selectedWidgetId) {
+      updateWidget(selectedWidgetId, { padding: nextPadding });
+    }
   };
 
   const updateSelectedWidgetAppearance = (property, value) => {
@@ -724,7 +933,7 @@ const Dashboard = ({ user, onLogout }) => {
         ...widget,
         tasksByDate: {
           ...tasksByDate,
-          [todayKey]: [...todaysTasks, taskText],
+          [todayKey]: [...todaysTasks, { id: Date.now(), text: taskText, completed: false }],
         },
       };
     };
@@ -732,6 +941,55 @@ const Dashboard = ({ user, onLogout }) => {
     updateWidget(widgetId, addTaskToWidget);
 
     setCalendarTaskInput("");
+  };
+
+  const toggleCalendarTask = (widgetId, dateKey, taskIndex, completed) => {
+    updateWidget(widgetId, (widget) => {
+      const tasksByDate = widget.tasksByDate ?? {};
+      const tasks = [...(tasksByDate[dateKey] ?? [])];
+      const task = tasks[taskIndex];
+      tasks[taskIndex] = typeof task === "string"
+        ? { text: task, completed }
+        : { ...task, completed };
+      return { ...widget, tasksByDate: { ...tasksByDate, [dateKey]: tasks } };
+    });
+  };
+
+  const toggleNotionTask = async (widgetId, task, completed) => {
+    const token = localStorage.getItem("notify_token");
+    const updateTaskInState = (isCompleted) => {
+      setNotionResources((previous) => {
+        const current = previous[widgetId];
+        if (!current) return previous;
+        const tasksByDate = { ...current.tasksByDate };
+        tasksByDate[task.date] = (tasksByDate[task.date] ?? []).map((item) =>
+          item.id === task.id ? { ...item, completed: isCompleted } : item
+        );
+        return { ...previous, [widgetId]: { ...current, tasksByDate } };
+      });
+    };
+
+    updateTaskInState(completed);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/integrations/notion/tasks/${encodeURIComponent(task.id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ completed }),
+        }
+      );
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || "Could not update the Notion task.");
+      }
+    } catch (error) {
+      updateTaskInState(!completed);
+      window.alert(error.message || "Could not update the Notion task.");
+    }
   };
 
   const removeCalendarTask = (widgetId, dateKey, taskIndex) => {
@@ -758,14 +1016,17 @@ const Dashboard = ({ user, onLogout }) => {
     height: `${widget.height}px`,
     opacity: (widget.opacity ?? 100) / 100,
     borderRadius: `${widget.cornerRadius ?? 16}px`,
-    backgroundColor: widget.color ?? "#412D15",
+    padding: `${widget.padding ?? 16}px`,
+    backgroundColor: widget.color ?? defaultWidgetColor,
   });
 
   const getWidgetContentScale = (widget) => {
-    const baseWidth = widget.type === "Task Management" ? 580 : 220;
-    const baseHeight = widget.type === "Task Management" ? 540 : 140;
-    const widthScale = (widget.width ?? baseWidth) / baseWidth;
-    const heightScale = (widget.height ?? baseHeight) / baseHeight;
+    if (widget.type === "Task Management") {
+      return 1;
+    }
+
+    const widthScale = (widget.width ?? 220) / 220;
+    const heightScale = (widget.height ?? 140) / 140;
 
     return clamp(Math.min(widthScale, heightScale), 0.55, 1.8);
   };
@@ -791,33 +1052,50 @@ const Dashboard = ({ user, onLogout }) => {
 
   const renderWidgetContent = (widget) => {
     if (widget.type === "Task Management") {
-      const calendarDays = getCalendarDays();
-      const currentMonth = new Date().toLocaleDateString([], {
-        month: "long",
-      });
+      const currentMonth = new Date().toLocaleDateString([], { month: "short" });
       const tasksByDate = widget.tasksByDate ?? {};
+      const notionTasksByDate = notionResources[widget.id]?.tasksByDate ?? {};
+      const calendarDays = getCalendarDays([
+        ...Object.entries(tasksByDate)
+          .filter(([, tasks]) => tasks.length > 0)
+          .map(([dateKey]) => dateKey),
+        ...Object.keys(notionTasksByDate),
+      ]);
 
       return (
         <div className="flex h-full flex-col overflow-hidden font-serif">
-          <h2 className="text-5xl font-bold leading-none text-white">
-            {currentMonth}
+          <h2 className="text-3xl font-bold leading-none text-white">
+            Tasks
           </h2>
 
           <div className="mt-6 flex min-h-0 flex-1 flex-col rounded-[24px] bg-[#f1efec] p-5 text-black">
             <div className="mb-4 flex items-start justify-between">
-              <h3 className="text-2xl font-bold leading-none">To-do list</h3>
-              <button
-                type="button"
-                onClick={(e) => e.stopPropagation()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500"
-              >
-                ...
-              </button>
+              <div className="flex items-center gap-2">
+                <h3 className="text-2xl font-bold leading-none">{currentMonth}</h3>
+                {widget.integrations?.notion && notionResources[widget.id]?.connected && (
+                  <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-medium text-green-800">
+                    Notion connected
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               {calendarDays.map((day, index) => {
-                const tasks = tasksByDate[day.key] ?? [];
+                const localTasks = (tasksByDate[day.key] ?? []).map((task, taskIndex) => ({
+                  text: typeof task === "string" ? task : task.text,
+                  completed: typeof task === "string" ? false : Boolean(task.completed),
+                  source: "local",
+                  taskIndex,
+                }));
+                const notionTasks = notionTasksByDate[day.key] ?? [];
+                const notionPages = Array.from(
+                  new Map(
+                    notionTasks
+                      .filter((task) => task.page_url)
+                      .map((task) => [task.page_url, task])
+                  ).values()
+                );
 
                 return (
                   <div
@@ -828,27 +1106,67 @@ const Dashboard = ({ user, onLogout }) => {
                       }`}
                   >
                     <div>
-                      <div className="text-sm font-medium text-gray-500">
-                        {day.dayName}
-                      </div>
-                      <div className="text-3xl font-bold leading-none">
+                      <div className={day.isToday
+                        ? "text-4xl font-extrabold leading-none text-[#412D15]"
+                        : `text-3xl font-bold leading-none ${day.isAdjacentDay ? "opacity-70" : ""}`}>
                         {day.dayNumber}
                       </div>
                     </div>
 
                     <div className="pt-3">
-                      {tasks.length === 0 ? (
-                        <div className="text-2xl font-bold">
-                          Nothing Scheduled
+                      {(day.isToday ? notionTasks.length === 0 : notionPages.length === 0) && localTasks.length === 0 ? (
+                        <div className={`py-2 font-medium text-gray-500 ${day.isToday ? "text-base" : "text-sm"}`}>
+                          No task scheduled
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {tasks.map((task, taskIndex) => (
-                            <div
-                              key={`${day.key}-${taskIndex}`}
-                              className="flex min-h-[72px] items-center justify-between gap-4 rounded-2xl bg-white px-5 py-4 text-lg font-bold"
+                          {!day.isToday && notionPages.map((page) => (
+                            <a
+                              key={`${day.key}-notion-${page.page_url}`}
+                              href={page.page_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title={`Open ${page.page_title} in Notion`}
+                              className={`flex items-center justify-between rounded-xl bg-white font-medium text-blue-700 hover:underline ${day.isToday ? "min-h-[54px] px-4 py-3 text-base" : "min-h-[42px] px-3 py-2 text-sm"}`}
                             >
-                              <span>{task}</span>
+                              View tasks <span aria-hidden="true">↗</span>
+                            </a>
+                          ))}
+                          {day.isToday && notionTasks.map((task) => (
+                            <div
+                              key={`${day.key}-notion-${task.id}`}
+                              className={`flex min-h-[54px] items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-base font-medium ${task.completed ? "text-gray-400 line-through" : ""}`}
+                            >
+                              <span className="min-w-0 flex-1">{task.text}</span>
+                              {task.page_url && (
+                                <a
+                                  href={task.page_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={`Open ${task.page_title} in Notion`}
+                                  className="shrink-0 text-[10px] font-medium text-blue-700 hover:underline"
+                                >
+                                  Notion
+                                </a>
+                              )}
+                              <input
+                                type="checkbox"
+                                checked={Boolean(task.completed)}
+                                aria-label={`Mark ${task.text} ${task.completed ? "incomplete" : "complete"}`}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => toggleNotionTask(widget.id, task, e.target.checked)}
+                                className="h-4 w-4 shrink-0 cursor-pointer accent-green-600"
+                              />
+                            </div>
+                          ))}
+                          {localTasks.map((task) => (
+                            <div
+                              key={`${day.key}-local-${task.taskIndex}`}
+                              className={`flex items-center justify-between gap-3 rounded-xl bg-white font-medium ${day.isToday ? "min-h-[54px] px-4 py-3 text-base" : "min-h-[42px] px-3 py-2 text-sm"} ${task.completed ? "text-gray-400 line-through" : ""}`}
+                            >
+                              <span className="min-w-0 flex-1">{task.text}</span>
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -856,13 +1174,24 @@ const Dashboard = ({ user, onLogout }) => {
                                   removeCalendarTask(
                                     widget.id,
                                     day.key,
-                                    taskIndex
+                                    task.taskIndex
                                   );
                                 }}
-                                className="shrink-0 text-4xl font-light leading-none text-gray-400 hover:text-gray-600"
+                                className="shrink-0 text-lg font-light leading-none text-gray-400 hover:text-gray-600"
                               >
                                 ×
                               </button>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(task.completed)}
+                                aria-label={`Mark ${task.text} ${task.completed ? "incomplete" : "complete"}`}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const completed = e.target.checked;
+                                  toggleCalendarTask(widget.id, day.key, task.taskIndex, completed);
+                                }}
+                                className="h-4 w-4 shrink-0 cursor-pointer accent-green-600"
+                              />
                             </div>
                           ))}
                         </div>
@@ -1008,7 +1337,13 @@ const Dashboard = ({ user, onLogout }) => {
                   ].map((item) => (
                     <button
                       key={item}
-                      onClick={() => setSelectedWidgetType(item)}
+                      onClick={() => {
+                        setSelectedWidgetType(item);
+                        if (item === "Task Management") {
+                          setShowIntegrationConsent(true);
+                          setShowCreateMenu(false);
+                        }
+                      }}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left
                   text-gray-700 dark:text-gray-300
                   hover:bg-[#F5F1E8] dark:hover:bg-[#151b35]
@@ -1031,29 +1366,13 @@ const Dashboard = ({ user, onLogout }) => {
                     <button
                       disabled={!selectedWidgetType}
                       onClick={() => {
-                        const isTaskManagementWidget =
-                          selectedWidgetType === "Task Management";
-                        const newWidget = {
-                          id: Date.now(),
-                          type: selectedWidgetType,
-                          width: isTaskManagementWidget ? 580 : 220,
-                          height: isTaskManagementWidget ? 540 : 140,
-                          opacity: 100,
-                          cornerRadius: 16,
-                          color: "#412D15",
-                          timeZone: defaultTimeZone,
-                          locationLabel: "Local Time",
-                          weatherLocation: defaultWeatherLocation,
-                          tasksByDate: {},
-                          isFavorite: false,
-                          isDeleted: false,
-                        };
+                        if (selectedWidgetType === "Task Management") {
+                          setShowIntegrationConsent(true);
+                          setShowCreateMenu(false);
+                          return;
+                        }
 
-                        setWidgets((prev) => [...prev, newWidget]);
-                        selectWidget(newWidget);
-                        setActiveMenu("My Widgets");
-                        setSelectedWidgetType(null);
-                        setShowCreateMenu(false);
+                        createWidget();
                       }}
                       className="w-full p-2 rounded-xl bg-[#412D15] dark:bg-purple-600 text-white text-sm disabled:opacity-50"
                     >
@@ -1109,7 +1428,7 @@ const Dashboard = ({ user, onLogout }) => {
                     key={widget.id}
                     onClick={() => selectWidget(widget)}
                     style={getWidgetStyle(widget)}
-                    className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${selectedWidgetId === widget.id
+                    className={`relative rounded-2xl text-white cursor-pointer transition-all ${selectedWidgetId === widget.id
                         ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
                         : "ring-0"
                       }`}
@@ -1147,9 +1466,12 @@ const Dashboard = ({ user, onLogout }) => {
                             setSelectedWidgetId(null);
                           }
                         }}
-                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-sm"
+                        type="button"
+                        aria-label="Move widget to Trash"
+                        title="Move to Trash"
+                        className="relative z-30 w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-xs"
                       >
-                        ×
+                        <FaTrash />
                       </button>
                     </div>
 
@@ -1170,7 +1492,7 @@ const Dashboard = ({ user, onLogout }) => {
                   key={widget.id}
                   onClick={() => selectWidget(widget)}
                   style={getWidgetStyle(widget)}
-                  className={`relative rounded-2xl text-white p-4 cursor-pointer transition-all ${selectedWidgetId === widget.id
+                  className={`relative rounded-2xl text-white cursor-pointer transition-all ${selectedWidgetId === widget.id
                       ? "ring-2 ring-[#C8A46A] dark:ring-purple-300"
                       : "ring-0"
                     }`}
@@ -1205,8 +1527,29 @@ const Dashboard = ({ user, onLogout }) => {
                 <div
                   key={widget.id}
                   style={getWidgetStyle(widget)}
-                  className="rounded-2xl text-white p-4 opacity-70"
+                  className="relative rounded-2xl text-white opacity-70"
                 >
+                  <div className="absolute right-2 top-2 z-30 flex items-center gap-1 rounded-xl border border-white/50 bg-white/75 p-1 shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-[#151b35]/80">
+                    <button
+                      type="button"
+                      onClick={() => updateWidget(widget.id, { isDeleted: false })}
+                      className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#55406B] transition-colors hover:bg-[#EEE5F6] dark:text-purple-200 dark:hover:bg-purple-400/15"
+                      aria-label={`Restore ${widget.title || widget.type}`}
+                    >
+                      <FaUndo className="text-[11px]" />
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => permanentlyDeleteWidget(widget.id)}
+                      disabled={permanentlyDeletingWidgetId === widget.id}
+                      className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#8B4B57] transition-colors hover:bg-[#F8E9EB] disabled:cursor-wait disabled:opacity-60 dark:text-rose-300 dark:hover:bg-rose-400/15"
+                      aria-label={`Delete ${widget.title || widget.type} permanently`}
+                    >
+                      <FaTrash className="text-[11px]" />
+                      {permanentlyDeletingWidgetId === widget.id ? "Deleting..." : "Delete permanently"}
+                    </button>
+                  </div>
                   {renderScaledWidgetContent(widget)}
                 </div>
               ))}
@@ -1357,6 +1700,24 @@ const Dashboard = ({ user, onLogout }) => {
                     className="bg-transparent text-black dark:text-white text-xs w-full outline-none"
                   />
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                    Content spacing
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {padding}px
+                  </span>
+                </div>
+                <Slider
+                  value={padding}
+                  min={0}
+                  max={40}
+                  disabled={!selectedWidgetId}
+                  onChange={updateSelectedWidgetPadding}
+                />
               </div>
             </section>
 
@@ -1601,6 +1962,11 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </div>
       </div>
+      <IntegrationConsentModal
+        isOpen={showIntegrationConsent}
+        onContinue={handleIntegrationContinue}
+        onSkip={() => createWidget([])}
+      />
     </div>
   );
 };
